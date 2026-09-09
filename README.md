@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://via.placeholder.com/150x150.png?text=KonMIk+Extensions" alt="KonMIk Extensions Logo" width="120" />
+  <img src="https://cdn.phototourl.com/free/2026-09-09-39864e7d-251e-4a86-94c2-b80a8ed91b34.jpg" width="120" />
   <h1>🚀 Panduan Ekstensi KonMIk</h1>
   <p><i>Cara mudah menambah katalog komik baru tanpa menyentuh kode inti (core) aplikasi!</i></p>
 </div>
