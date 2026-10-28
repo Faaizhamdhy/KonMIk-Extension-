@@ -1,7 +1,7 @@
 // ID: ext_novel_indowebnovel
 // NAME: IndoWebNovel
 // TYPE: novel
-// VERSION: 1.0.1
+// VERSION: 1.0.2
 // COLOR: #00897B
 // ICON: https://www.google.com/s2/favicons?domain=indowebnovel.id&sz=64
 // REFERER: https://indowebnovel.id/
@@ -62,6 +62,13 @@ var KonmikExtension = {
       }
       if (!title) title = slug.replace(/-/g, ' ');
 
+      // Ambil bab terbaru jika tersedia di card
+      let latestChapter = "";
+      const chBlockMatch = block.match(/<ul class=['"]chapter['"]>[\s\S]*?<a[^>]+href=['"][^'"]+['"][^>]*>([\s\S]*?)<\/a>/i);
+      if (chBlockMatch) {
+        latestChapter = this._extractChapterNumber(this._cleanText(chBlockMatch[1]));
+      }
+
       if (slug && !seen[slug]) {
         seen[slug] = true;
         novels.push({
@@ -71,7 +78,8 @@ var KonmikExtension = {
           cover: cover,
           source: "ext_novel_indowebnovel",
           type: "Web Novel",
-          status: "Ongoing"
+          status: "Ongoing",
+          latest_chapter: latestChapter || null
         });
       }
     }
@@ -134,14 +142,20 @@ var KonmikExtension = {
 
     const chapters = [];
     const chSeen = {};
-    const chRegex = /<div class=['"]flexch-infoz['"]>[\s\S]*?<a[^>]+href=['"](https:\/\/indowebnovel\.id\/([^"'\/]+)\/?)['"][^>]*>([\s\S]*?)<\/a>[\s\S]*?(?:<span class=['"]date['"]>([^<]*)<\/span>)?/gi;
+    const chRegex = /<div class=['"]flexch-infoz['"]>[\s\S]*?<a[^>]+href=['"]([^'"]+)['"][^>]*>([\s\S]*?)<\/a>/gi;
     let chMatch;
     let idx = 1;
     while ((chMatch = chRegex.exec(html)) !== null) {
       const chUrl = chMatch[1];
-      const chSlug = chMatch[2] || chUrl.replace("https://indowebnovel.id/", "").replace(/\//g, "");
-      let rawTitle = chMatch[3] ? this._cleanText(chMatch[3]) : `Chapter ${idx}`;
-      let chDate = chMatch[4] ? this._cleanText(chMatch[4]) : "";
+      const innerA = chMatch[2];
+      
+      // Pisahkan tanggal agar tidak menyatu dengan judul bab
+      const dateMatch = innerA.match(/<span class=['"]date['"]>([^<]*)<\/span>/i);
+      const chDate = dateMatch ? this._cleanText(dateMatch[1]) : "";
+      
+      // Bersihkan tanggal dari judul bab
+      const pureTitleHtml = innerA.replace(/<span class=['"]date['"]>[\s\S]*?<\/span>/gi, '');
+      const rawTitle = this._cleanText(pureTitleHtml) || `Chapter ${idx}`;
 
       if (chUrl && !chSeen[chUrl]) {
         chSeen[chUrl] = true;
@@ -187,15 +201,17 @@ var KonmikExtension = {
     if (titleMatch) title = this._cleanText(titleMatch[1]);
 
     let contentHtml = "";
-    const startMatch = html.match(/<div[^>]+id=['"]content['"][^>]*>/i);
+    const startMatch = html.match(/<div[^>]+(?:id=['"]content['"]|class=['"][^'"]*(?:text-left|epcontent|entry-content|read-content)[^'"]*['"])[^>]*>/i);
     if (startMatch) {
       const startIdx = startMatch.index + startMatch[0].length;
       const sub = html.substring(startIdx);
-      const endMatch = sub.match(/<div[^>]+class=['"](?:wpd-comment|bottom|nav-links|comments)/i);
-      contentHtml = endMatch ? sub.substring(0, endMatch.index) : sub.substring(0, sub.indexOf('</div>'));
+      const endMatch = sub.match(/<div[^>]+(?:class=['"][^'"]*(?:comment|wpd-|entry-pagination|bottom|nav-links|social-share)[^'"]*['"]|id=['"]comments['"])/i);
+      contentHtml = endMatch ? sub.substring(0, endMatch.index) : sub;
     } else {
-      const epMatch = html.match(/class=['"]epcontent['"][^>]*>([\s\S]*?)<\/div>/i);
-      if (epMatch) contentHtml = epMatch[1];
+      const pMatches = html.match(/<p>[\s\S]*?<\/p>/gi);
+      if (pMatches) {
+        contentHtml = pMatches.join('\n');
+      }
     }
 
     contentHtml = contentHtml.replace(/<script[\s\S]*?<\/script>/gi, '');
