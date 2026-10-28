@@ -1,7 +1,7 @@
 // ID: ext_novel_indowebnovel
 // NAME: IndoWebNovel
 // TYPE: novel
-// VERSION: 1.0.2
+// VERSION: 1.0.3
 // COLOR: #00897B
 // ICON: https://www.google.com/s2/favicons?domain=indowebnovel.id&sz=64
 // REFERER: https://indowebnovel.id/
@@ -101,12 +101,24 @@ var KonmikExtension = {
     });
     const html = await res.text();
 
+    // 1. Judul & Judul Alternatif
     let title = "";
-    const titleMatch = html.match(/<h[12][^>]*class=['"][^'"]*text-uppercase[^'"]*['"][^>]*>([\s\S]*?)<\/h[12]>/i) ||
+    const titleMatch = html.match(/<div class=['"]series-titlex['"]>[\s\S]*?<h[12][^>]*>([\s\S]*?)<\/h[12]>/i) ||
+                       html.match(/<h[12][^>]*class=['"][^'"]*text-uppercase[^'"]*['"][^>]*>([\s\S]*?)<\/h[12]>/i) ||
                        html.match(/<h[12][^>]*>([\s\S]*?)<\/h[12]>/i);
     if (titleMatch) title = this._cleanText(titleMatch[1]);
     if (!title) title = slug.replace(/-/g, ' ');
 
+    let altTitle = "";
+    const altMatch = html.match(/<div class=['"]series-titlex['"]>[\s\S]*?<span>([\s\S]*?)<\/span>/i);
+    if (altMatch) {
+      const cleanAlt = this._cleanText(altMatch[1]);
+      if (cleanAlt.toLowerCase() !== title.toLowerCase()) {
+        altTitle = cleanAlt;
+      }
+    }
+
+    // 2. Cover
     let cover = "";
     const thumbBlockMatch = html.match(/class=['"](?:series-thumb|thumb)['"][^>]*>([\s\S]*?)<\/div>/i);
     if (thumbBlockMatch) {
@@ -114,6 +126,7 @@ var KonmikExtension = {
       if (imgMatch) cover = imgMatch[1];
     }
 
+    // 3. Sinopsis
     let synopsis = "";
     const synopMatch = html.match(/class=['"]series-synops['"][^>]*>([\s\S]*?)<\/div>/i) ||
                        html.match(/class=['"]series-synopsis['"][^>]*>([\s\S]*?)<\/div>/i);
@@ -121,6 +134,7 @@ var KonmikExtension = {
       synopsis = this._cleanText(synopMatch[1]);
     }
 
+    // 4. Genre
     const genres = [];
     const genreRegex = /<a[^>]+href=['"]https:\/\/indowebnovel\.id\/genre\/[^'"]+['"][^>]*>([^<]+)<\/a>/gi;
     let gMatch;
@@ -130,16 +144,31 @@ var KonmikExtension = {
     }
     if (genres.length === 0) genres.push("Web Novel");
 
+    // 5. Status & Tipe & Author (Parsing terarah khusus blok metadata)
     let status = "Ongoing";
-    let type = "Web Novel";
-    let author = "";
-    const statusMatch = html.match(/Status[\s\S]*?<[^>]*>([^<]+)<\/[^>]*>/i);
+    const statusMatch = html.match(/<span[^>]+class=['"]status[^\'"]*['"][^>]*>([\s\S]*?)<\/span>/i) ||
+                        html.match(/<b>\s*Status\s*<\/b>\s*<span>([\s\S]*?)<\/span>/i);
     if (statusMatch) status = this._cleanText(statusMatch[1]);
-    const typeMatch = html.match(/Type[\s\S]*?<[^>]*>([^<]+)<\/[^>]*>/i);
-    if (typeMatch) type = this._cleanText(typeMatch[1]);
-    const authorMatch = html.match(/Author[\s\S]*?<[^>]*>([^<]+)<\/[^>]*>/i);
-    if (authorMatch) author = this._cleanText(authorMatch[1]);
 
+    let type = "Web Novel";
+    const typeMatch = html.match(/<span[^>]+class=['"]type[^\'"]*['"][^>]*>([\s\S]*?)<\/span>/i) ||
+                      html.match(/<b>\s*Type\s*<\/b>\s*<span>([\s\S]*?)<\/span>/i);
+    if (typeMatch) {
+      const cleanT = this._cleanText(typeMatch[1]);
+      if (cleanT.length <= 25) type = cleanT;
+    }
+
+    let author = "";
+    const authorMatch = html.match(/<li>\s*<b>\s*Author\s*<\/b>\s*<span>([\s\S]*?)<\/span>\s*<\/li>/i) ||
+                        html.match(/<b>\s*Author\s*<\/b>\s*<span>([\s\S]*?)<\/span>/i);
+    if (authorMatch) {
+      const cleanA = this._cleanText(authorMatch[1]);
+      if (!cleanA.toLowerCase().includes('login') && !cleanA.toLowerCase().includes('favorite')) {
+        author = cleanA;
+      }
+    }
+
+    // 6. Daftar Bab
     const chapters = [];
     const chSeen = {};
     const chRegex = /<div class=['"]flexch-infoz['"]>[\s\S]*?<a[^>]+href=['"]([^'"]+)['"][^>]*>([\s\S]*?)<\/a>/gi;
@@ -174,6 +203,7 @@ var KonmikExtension = {
 
     return {
       title: title,
+      alternative_titles: altTitle,
       cover: cover,
       synopsis: synopsis,
       genres: genres,
