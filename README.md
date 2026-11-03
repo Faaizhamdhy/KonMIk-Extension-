@@ -15,6 +15,7 @@ Ekstensi KonMik memungkinkan pengguna dan AI Coding Agent untuk menambahkan sumb
 7. [Contoh Kode Ekstensi Lengkap Siap Pakai](#-contoh-kode-ekstensi-lengkap-siap-pakai)
    - [Contoh Komik: `webtoon.js`](#-1-contoh-ekstensi-komik-webtoonjs)
    - [Contoh Novel: `indowebnovel.js`](#-2-contoh-ekstensi-novel-indowebnoveljs)
+| `ext_comicaso` | **Comicaso (ID)** | Komik | Indonesia | [comicaso.js](./comicaso.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/comicaso.js` |
 8. [Panduan Khusus untuk AI Agent (Prompting Guide)](#-panduan-khusus-untuk-ai-agent-prompting-guide)
 9. [Cara Memasang Ekstensi di Aplikasi KonMik](#-cara-memasang-ekstensi-di-aplikasi-konmik)
 
@@ -43,6 +44,7 @@ Ekstensi KonMik berupa **file JavaScript tunggal (`.js`)** standar ES2020 yang d
 |---|---|---|---|---|---|
 | `ext_webtoon_id` | **LINE Webtoon (ID)** | Komik | Indonesia | [webtoon.js](./webtoon.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/webtoon.js` |
 | `ext_novel_indowebnovel` | **IndoWebNovel** | Novel | Indonesia | [indowebnovel.js](./indowebnovel.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/indowebnovel.js` |
+| `ext_comicaso` | **Comicaso (ID)** | Komik | Indonesia | [comicaso.js](./comicaso.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/comicaso.js` |
 
 ---
 
@@ -654,3 +656,5 @@ Karena repositori ini bersifat publik, Anda dapat langsung memasang ekstensi men
 ## 🤝 Kontribusi
 Punya ekstensi baru yang ingin dibagikan?  
 Buat *Pull Request* ke repositori [KonMIk-Extension-](https://github.com/Faaizhamdhy/KonMIk-Extension-) atau buat Issue baru dengan melampirkan file skrip ekstensi Anda!
+
+
