@@ -46,6 +46,7 @@ Ekstensi KonMik berupa **file JavaScript tunggal (`.js`)** standar ES2020 yang d
 | `ext_comicaso` | **Comicaso (ID)** | Komik | Indonesia | [comicaso.js](./comicaso.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/comicaso.js` |
 | `ext_webtoon_id` | **LINE Webtoon (ID)** | Komik | Indonesia | [webtoon.js](./webtoon.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/webtoon.js` |
 | `ext_novel_indowebnovel` | **IndoWebNovel** | Novel | Indonesia | [indowebnovel.js](./indowebnovel.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/indowebnovel.js` |
+| `ext_novel_flyinglines` | **Flying Lines (EN)** | Novel | Inggris | [flyinglines.js](./flyinglines.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/flyinglines.js` |
 
 ---
 
