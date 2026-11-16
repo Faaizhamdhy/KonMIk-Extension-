@@ -41,6 +41,8 @@ Ekstensi KonMik berupa **file JavaScript tunggal (`.js`)** standar ES2020 yang d
 
 | ID | Nama Sumber | Kategori | Bahasa | File Sumber | Tautan Raw GitHub (Langsung Tempel) |
 |---|---|---|---|---|---|
+| `ext_westmanga` | **Westmanga** | Komik | Indonesia | [westmanga.js](./westmanga.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/westmanga.js` |
+| `ext_comicaso` | **Comicaso (ID)** | Komik | Indonesia | [comicaso.js](./comicaso.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/comicaso.js` |
 | `ext_webtoon_id` | **LINE Webtoon (ID)** | Komik | Indonesia | [webtoon.js](./webtoon.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/webtoon.js` |
 | `ext_novel_indowebnovel` | **IndoWebNovel** | Novel | Indonesia | [indowebnovel.js](./indowebnovel.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/indowebnovel.js` |
 
