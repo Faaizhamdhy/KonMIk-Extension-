@@ -41,7 +41,6 @@ Ekstensi KonMik berupa **file JavaScript tunggal (`.js`)** standar ES2020 yang d
 
 | ID | Nama Sumber | Kategori | Bahasa | File Sumber | Tautan Raw GitHub (Langsung Tempel) |
 |---|---|---|---|---|---|
-| `ext_softkomik` | **Softkomik (ID)** | Komik | Indonesia | [softkomik.js](./softkomik.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/softkomik.js` |
 | `ext_westmanga` | **Westmanga** | Komik | Indonesia | [westmanga.js](./westmanga.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/westmanga.js` |
 | `ext_rosyscans` | **Rosyscans (ID)** | Komik | Indonesia | [rosyscans.js](./rosyscans.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/rosyscans.js` |
 | `ext_comicaso` | **Comicaso (ID)** | Komik | Indonesia | [comicaso.js](./comicaso.js) | `https://raw.githubusercontent.com/Faaizhamdhy/KonMIk-Extension-/main/comicaso.js` |
