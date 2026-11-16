@@ -1,9 +1,9 @@
 // ID: ext_rosyscans
 // NAME: Rosyscans (ID)
 // TYPE: comic
-// VERSION: 1.0.0
+// VERSION: 1.0.1
 // COLOR: #DD0097
-// ICON: https://www.google.com/s2/favicons?domain=rosyscans.com&sz=64
+// ICON: https://rosyscans.com/wp-content/uploads/2026/11/cropped-rosyscans_logo-192x192.png
 // REFERER: https://rosyscans.com/
 
 /**
