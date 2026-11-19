@@ -1,7 +1,7 @@
 // ID: ext_rosyscans
 // NAME: Rosyscans (ID)
 // TYPE: comic
-// VERSION: 1.0.1
+// VERSION: 1.0.2
 // COLOR: #DD0097
 // ICON: https://rosyscans.com/wp-content/uploads/2026/11/cropped-rosyscans_logo-192x192.png
 // REFERER: https://rosyscans.com/
@@ -33,6 +33,7 @@ function cleanText(str) {
         .replace(/&#8217;/g, "'")
         .replace(/&#8220;/g, '"')
         .replace(/&#8221;/g, '"')
+        .replace(/&#038;/g, '&')
         .replace(/&amp;/g, '&')
         .replace(/&nbsp;/g, ' ')
         .replace(/\s+/g, ' ')
@@ -65,7 +66,8 @@ var KonmikExtension = {
             params.push(`title=${encodeURIComponent(query.trim())}`);
         } else if (filters && filters.sort === 'popular') {
             params.push('order=popular');
-        } else if (filters && filters.sort === 'latest') {
+        } else {
+            // Default ke order=update agar selalu menampilkan komik terupdate yang memiliki chapter
             params.push('order=update');
         }
 
@@ -81,8 +83,17 @@ var KonmikExtension = {
         const seen = new Set();
 
         for (const block of cardBlocks) {
-            const slug = extractMatch(/<a[^>]+href=[\'"]https?:\/\/rosyscans\.com\/manga\/([^\/\'"]+)\/?[\'"]/i, block);
+            // Support fleksibel domain (rosyscans.com / rosyscans.id / relative)
+            const slug = extractMatch(/<a[^>]+href=[\'"](?:https?:\/\/[^\/]+)?\/manga\/([^\/\'"]+)\/?[\'"]/i, block);
             if (!slug || seen.has(slug)) continue;
+
+            const chapter = cleanText(extractMatch(/<div class=[\'"]epxs[\'"]>([\s\S]*?)<\/div>/i, block));
+            
+            // Lewati judul dummy / placeholder yang belum memiliki chapter rilis
+            if (chapter.includes('?') || chapter.toLowerCase() === 'chapter') {
+                continue;
+            }
+
             seen.add(slug);
 
             let cover = extractMatch(/<img[^>]+(?:data-src|src)=[\'"]([^\'"]+)[\'"]/i, block);
@@ -94,14 +105,13 @@ var KonmikExtension = {
                 extractMatch(/<div class=[\'"]tt[\'"]>([\s\S]*?)<\/div>/i, block) ||
                 extractMatch(/title=[\'"]([^\'"]+)[\'"]/i, block)
             );
-            const chapter = cleanText(extractMatch(/<div class=[\'"]epxs[\'"]>([\s\S]*?)<\/div>/i, block));
             const rating = cleanText(extractMatch(/<div class=[\'"]numscore[\'"]>([\s\S]*?)<\/div>/i, block) || '0');
 
             mangaList.push({
                 id: slug,
                 title: title || 'Untitled',
                 cover_url: cover,
-                latest_chapter: chapter,
+                latest_chapter: chapter || 'Chapter 1',
                 rating: rating || '0',
                 views: '-'
             });
@@ -114,7 +124,13 @@ var KonmikExtension = {
      * Mengambil info detail komik dan daftar chapter.
      */
     async getDetail(slug) {
-        const url = slug.startsWith('http') ? slug : `${BASE}/manga/${slug}/`;
+        let cleanSlug = slug;
+        if (cleanSlug.startsWith('http')) {
+            const m = cleanSlug.match(/\/manga\/([^\/\'"]+)/i);
+            if (m) cleanSlug = m[1];
+        }
+
+        const url = cleanSlug.startsWith('http') ? cleanSlug : `${BASE}/manga/${cleanSlug}/`;
         const html = await fetchHtml(url);
 
         const title = cleanText(
@@ -151,7 +167,7 @@ var KonmikExtension = {
         );
 
         // Daftar Genre
-        const genreRegex = /<a[^>]+href=[\'"]https?:\/\/rosyscans\.com\/genres\/[^\'"]+[\'"][^>]*>([^<]+)<\/a>/gi;
+        const genreRegex = /<a[^>]+href=[\'"](?:https?:\/\/[^\/]+)?\/genres\/[^\'"]+[\'"][^>]*>([^<]+)<\/a>/gi;
         const genreMatches = extractAll(genreRegex, html);
         const genres = [...new Set(genreMatches.map(g => cleanText(g[1])))];
 
@@ -159,14 +175,26 @@ var KonmikExtension = {
         const chapterRegex = /<li[^>]*data-num=[\'"]([^\'"]*)[\'"][\s\S]*?<a[^>]+href=[\'"]([^\'"]+)[\'"][^>]*>[\s\S]*?<span class=[\'"]chapternum[\'"]>([\s\S]*?)<\/span>[\s\S]*?<span class=[\'"]chapterdate[\'"]>([\s\S]*?)<\/span>/gi;
         let chapterMatches = extractAll(chapterRegex, html);
 
-        // Fallback jika tag <li> tidak menggunakan atribut data-num
+        // Fallback jika format li tanpa data-num
         if (chapterMatches.length === 0) {
             const fallbackRegex = /<div class=[\'"]eph-num[\'"]>[\s\S]*?<a[^>]+href=[\'"]([^\'"]+)[\'"][^>]*>[\s\S]*?<span class=[\'"]chapternum[\'"]>([\s\S]*?)<\/span>[\s\S]*?<span class=[\'"]chapterdate[\'"]>([\s\S]*?)<\/span>/gi;
             chapterMatches = extractAll(fallbackRegex, html).map(m => ['', m[1], m[2], m[3]]);
         }
 
+        // Fallback kedua: cari setiap tag <a> chapter di dalam #chapterlist
+        if (chapterMatches.length === 0) {
+            const chapterListBlock = extractMatch(/id=[\'"]chapterlist[\'"][^>]*>([\s\S]*?)<\/div>/i, html, '');
+            if (chapterListBlock) {
+                const simpleChRegex = /<a[^>]+href=[\'"]([^\'"]+)[\'"][^>]*>[\s\S]*?<span class=[\'"]chapternum[\'"]>([\s\S]*?)<\/span>/gi;
+                chapterMatches = extractAll(simpleChRegex, chapterListBlock).map(m => ['', m[1], m[2], '-']);
+            }
+        }
+
         const chapters = chapterMatches.map(m => {
-            const chUrl = m[2];
+            let chUrl = m[2];
+            if (chUrl && chUrl.startsWith('/')) {
+                chUrl = `${BASE}${chUrl}`;
+            }
             const chTitle = cleanText(m[3] || `Chapter ${m[1]}`);
             const chDate = cleanText(m[4] || '-');
 
@@ -177,6 +205,16 @@ var KonmikExtension = {
                 date: chDate
             };
         });
+
+        // Jika komik baru di katalog Rosyscans belum memiliki chapter sama sekali
+        if (chapters.length === 0) {
+            chapters.push({
+                id: 'unreleased',
+                title: 'Chapter 0 (Segera Hadir / Belum Ada Bab)',
+                endpoint: '',
+                date: '-'
+            });
+        }
 
         return {
             title: title,
@@ -195,11 +233,17 @@ var KonmikExtension = {
      * Mengambil daftar URL gambar halaman dari suatu bab komik.
      */
     async getChapterImages(endpoint) {
-        const url = endpoint.startsWith('http') ? endpoint : `${BASE}/${endpoint}`;
+        if (!endpoint || endpoint === 'unreleased') return [];
+
+        let url = endpoint;
+        if (!url.startsWith('http')) {
+            url = url.startsWith('/') ? `${BASE}${url}` : `${BASE}/${url}`;
+        }
+
         const html = await fetchHtml(url);
 
         // 1. Coba ambil dari konfigurasi ts_reader.run(...)
-        const tsMatch = html.match(/ts_reader\.run\((\{[\s\S]*?\})\);/);
+        const tsMatch = html.match(/ts_reader\.run\((\{[\s\S]*?\})\)/);
         if (tsMatch) {
             try {
                 const tsData = JSON.parse(tsMatch[1]);
@@ -213,16 +257,21 @@ var KonmikExtension = {
                     }
                 }
             } catch (e) {
-                // Lanjut ke metode fallback jika JSON parse gagal
+                // Fallback ke parser HTML jika JSON parse gagal
             }
         }
 
-        // 2. Fallback: Parse elemen <img> di dalam #readerarea
-        const readerMatch = html.match(/<div[^>]+id=[\'"]readerarea[\'"][^>]*>([\s\S]*?)<\/div>/i);
-        if (readerMatch) {
+        // 2. Fallback: Parse elemen <img> di dalam area pembaca (#readerarea)
+        const readerIdx = html.indexOf('id="readerarea"');
+        const altReaderIdx = readerIdx !== -1 ? readerIdx : html.indexOf("id='readerarea'");
+        
+        if (altReaderIdx !== -1) {
+            const areaSlice = html.substring(altReaderIdx, altReaderIdx + 60000);
             const imgRegex = /<img[^>]+(?:data-src|src)=[\'"]([^\'"]+)[\'"]/gi;
-            const imgMatches = extractAll(imgRegex, readerMatch[1]);
-            const imgs = imgMatches.map(m => m[1].startsWith('//') ? 'https:' + m[1] : m[1]);
+            const imgMatches = extractAll(imgRegex, areaSlice);
+            const imgs = imgMatches
+                .map(m => m[1].startsWith('//') ? 'https:' + m[1] : m[1])
+                .filter(u => !u.includes('placeholder') && !u.includes('loading') && (u.includes('.jpg') || u.includes('.png') || u.includes('.webp') || u.includes('/uploads/')));
             if (imgs.length > 0) {
                 return imgs;
             }
