@@ -1,0 +1,174 @@
+const BASE_URL = "https://doujindesu.tv";
+
+konstanta header = {
+  "Agen Pengguna": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Referer": `${BASE_URL}/`,
+  "Terima-Bahasa": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+};
+
+/**
+ * 1. CARI / DAPATKAN DAFTAR
+ * Mengambil daftar komik berdasarkan halaman atau kata kunci pencarian
+ */
+fungsi async pencarian(query = "", halaman = 1) {
+  mencoba {
+    misalkan url = `${BASE_URL}/page/${page}/`;
+    jika (query && query.trim() !== "") {
+      url = `${BASE_URL}/page/${page}/?s=${encodeURIComponent(query)}`;
+    }
+
+    const res = await fetch(url, { headers });
+    const html = await res.text();
+
+    let list = [];
+    
+    // Parser sederhana menggunakan regex untuk mengambil elemen komik dari HTML Doujindesu
+    // Format umum: <div class="kan"> atau <article> yang memuat tag <a>, <img>, dan judul
+    const articleRegex = /<article[^>]*>([\s\S]*?)<\/article>/gi;
+    biarkan cocok;
+
+    selama ((match = articleRegex.exec(html)) !== null) {
+      const block = match[1];
+
+      const linkMatch = block.match(/href="([^"]+)"/);
+      const titleMatch = block.match(/title="([^"]+)"/) || block.match(/<h2[^>]*>([^<]+)<\/h2>/);
+      const imgMatch = block.match(/src="([^"]+)"/) || block.match(/data-src="([^"]+)"/);
+
+      jika (linkMatch && titleMatch) {
+        const mangaUrl = linkMatch[1];
+        // Ekstrak ID unik dari URL (misal: /manga/judul-komik/ -> judul-komik)
+        const idMatch = mangaUrl.match(/\/manga\/([^/]+)/) || mangaUrl.match(/.tv\/([^/]+)/);
+        const id = idMatch? idMatch[1] : mangaUrl;
+
+        daftar.push({
+          id: String(id),
+          judul: titleMatch[1].trim(),
+          sampul: imgMatch ? imgMatch[1] : "",
+          URL: mangaUrl
+        });
+      }
+    }
+
+    kembali {
+      status: benar,
+      data: daftar,
+      hasNextPage: html.includes("next page") || html.includes("pagination") || list.length > 0
+    };
+  } tangkap (kesalahan) {
+    kembali {
+      status: salah,
+      pesan: pesan kesalahan,
+      data: []
+    };
+  }
+}
+
+/**
+ * 2. DAPATKAN DETAIL
+ * Mengambil informasi detail komik beserta daftar chapternya
+ */
+fungsi asinkron getDetail(mangaId) {
+  mencoba {
+    // Jika mangaId berupa slug, digabungkan dengan URL dasar
+    const url = mangaId.startsWith("http") ? mangaId : `${BASE_URL}/manga/${mangaId}/`;
+    const res = await fetch(url, { headers });
+    const html = await res.text();
+
+    // Ekstrak Judul
+    const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
+    const title = titleMatch ? titleMatch[1].trim() : "Judul Tidak Diketahui";
+
+    // Ekstrak Sampul / Poster
+    const coverMatch = html.match(/<div class="ime">\s*<img[^>]*src="([^"]+)"/) || html.match(/<img class="wp-post-image"[^>]*src="([^"]+)"/);
+    const cover = coverMatch ? coverMatch[1] : "";
+
+    // Ekstrak Sinopsis
+    const synopsisMatch = html.match(/<div class="desc"[^>]*>([\s\S]*?)<\/div>/) || html.match(/<div class="entry-content"[^>]*>([\s\S]*?)<\/div>/);
+    const synopsis = synopsisMatch ? synopsisMatch[1].replace(/<[^>]*>?/gm, "").trim() : "";
+
+    // Ekstrak Daftar Bab
+    misalkan bab = [];
+    const babRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+    biarkan chMatch;
+
+    selama ((chMatch = chapterRegex.exec(html)) !== null) {
+      const chBlock = chMatch[1];
+      const chLinkMatch = chBlock.match(/href="([^"]+)"/);
+      const chTitleMatch = chBlock.match(/<a[^>]*>([^<]+)<\/a>/);
+
+      jika (chLinkMatch && chTitleMatch) {
+        const chUrl = chLinkMatch[1];
+        const chIdMatch = chUrl.match(/\/chapter\/([^/]+)/) || chUrl.match(/.tv\/([^/]+)/);
+        
+        bab.dorong({
+          id: chIdMatch ? chIdMatch[1] : chUrl,
+          judul: chTitleMatch[1].trim(),
+          URL: chUrl
+        });
+      }
+    }
+
+    kembali {
+      status: benar,
+      data: {
+        id: String(mangaId),
+        judul: judul,
+        sampul: sampul,
+        sinopsis: sinopsis,
+        Penulis: "Tidak Diketahui",
+        status: "Sedang Berlangsung",
+        genre: [],
+        bab: bab
+      }
+    };
+  } tangkap (kesalahan) {
+    kembali {
+      status: salah,
+      pesan: err.message
+    };
+  }
+}
+
+/**
+ * 3. DAPATKAN HALAMAN / PEMBACA
+ * Mengambil daftar gambar halaman untuk membaca bab
+ */
+fungsi asinkron getPages(mangaId, chapterId) {
+  mencoba {
+    const url = chapterId.startsWith("http") ? chapterId : `${BASE_URL}/chapter/${chapterId}/`;
+    const res = await fetch(url, { headers });
+    const html = await res.text();
+
+    misalkan halaman = [];
+    
+    // Mencari tag gambar di dalam area reader (biasanya di dalam div id="readerarea" atau sejenisnya)
+    const imgRegex = /<img[^>]+src="([^"]+)"[^>]*>/gi;
+    biarkan cocok;
+
+    selama ((match = imgRegex.exec(html)) !== null) {
+      const imgSrc = match[1];
+      // Filter agar hanya mengambil gambar komik (biasanya berisi CDN gambar doujindesu)
+      jika (imgSrc && !imgSrc.includes("logo") && !imgSrc.includes("icon") && !imgSrc.includes("avatar")) {
+        halaman.push(imgSrc);
+      }
+    }
+
+    kembali {
+      status: benar,
+      data: halaman
+    };
+  } tangkap (kesalahan) {
+    kembali {
+      status: salah,
+      pesan: pesan kesalahan,
+      data: []
+    };
+  }
+}
+
+// FORMAT EKSPOR WAJIB
+ekspor.default = {
+  mencari,
+  getList: pencarian,
+  Dapatkan detailnya,
+  mendapatkan halaman
