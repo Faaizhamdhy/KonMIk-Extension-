@@ -1,7 +1,7 @@
 // ID: ext_rosyscans
 // NAME: Rosyscans (ID)
 // TYPE: comic
-// VERSION: 1.0.2
+// VERSION: 1.0.3
 // COLOR: #DD0097
 // ICON: https://rosyscans.com/wp-content/uploads/2026/11/cropped-rosyscans_logo-192x192.png
 // REFERER: https://rosyscans.com/
@@ -242,6 +242,8 @@ var KonmikExtension = {
 
         const html = await fetchHtml(url);
 
+        let rawImages = [];
+
         // 1. Coba ambil dari konfigurasi ts_reader.run(...)
         const tsMatch = html.match(/ts_reader\.run\((\{[\s\S]*?\})\)/);
         if (tsMatch) {
@@ -250,10 +252,7 @@ var KonmikExtension = {
                 if (tsData && Array.isArray(tsData.sources) && tsData.sources.length > 0) {
                     const images = tsData.sources[0].images;
                     if (Array.isArray(images) && images.length > 0) {
-                        return images.map(img => {
-                            if (img.startsWith('//')) return 'https:' + img;
-                            return img;
-                        });
+                        rawImages = images;
                     }
                 }
             } catch (e) {
@@ -262,21 +261,33 @@ var KonmikExtension = {
         }
 
         // 2. Fallback: Parse elemen <img> di dalam area pembaca (#readerarea)
-        const readerIdx = html.indexOf('id="readerarea"');
-        const altReaderIdx = readerIdx !== -1 ? readerIdx : html.indexOf("id='readerarea'");
-        
-        if (altReaderIdx !== -1) {
-            const areaSlice = html.substring(altReaderIdx, altReaderIdx + 60000);
-            const imgRegex = /<img[^>]+(?:data-src|src)=[\'"]([^\'"]+)[\'"]/gi;
-            const imgMatches = extractAll(imgRegex, areaSlice);
-            const imgs = imgMatches
-                .map(m => m[1].startsWith('//') ? 'https:' + m[1] : m[1])
-                .filter(u => !u.includes('placeholder') && !u.includes('loading') && (u.includes('.jpg') || u.includes('.png') || u.includes('.webp') || u.includes('/uploads/')));
-            if (imgs.length > 0) {
-                return imgs;
+        if (rawImages.length === 0) {
+            const readerIdx = html.indexOf('id="readerarea"');
+            const altReaderIdx = readerIdx !== -1 ? readerIdx : html.indexOf("id='readerarea'");
+            
+            if (altReaderIdx !== -1) {
+                const areaSlice = html.substring(altReaderIdx, altReaderIdx + 60000);
+                const imgRegex = /<img[^>]+(?:data-src|src)=[\'"]([^\'"]+)[\'"]/gi;
+                const imgMatches = extractAll(imgRegex, areaSlice);
+                rawImages = imgMatches
+                    .map(m => m[1])
+                    .filter(u => !u.includes('placeholder') && !u.includes('loading') && (u.includes('.jpg') || u.includes('.png') || u.includes('.webp') || u.includes('/uploads/')));
             }
         }
 
-        return [];
+        if (rawImages.length === 0) return [];
+
+        return rawImages.map(img => {
+            let fullImg = img.trim();
+            if (fullImg.startsWith('//')) fullImg = 'https:' + fullImg;
+
+            // Alirkan CDN gambar img.rosyscans.id via proxy backend resmi KonMik
+            // agar tembus blokir ISP seluler di Indonesia (anti-DNS hanging / IPv6 drop)
+            if (fullImg.includes('img.rosyscans.id') || fullImg.includes('rosyscans')) {
+                return `https://api.konkon.id/proxy?url=${encodeURIComponent(fullImg)}&referer=https%3A%2F%2Frosyscans.com%2F`;
+            }
+
+            return fullImg;
+        });
     }
 };
